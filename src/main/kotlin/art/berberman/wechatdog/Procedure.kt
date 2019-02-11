@@ -1,10 +1,8 @@
 package art.berberman.wechatdog
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.vertx.ext.web.client.WebClient
 import io.vertx.kotlin.core.json.JsonObject
 import io.vertx.kotlin.ext.web.client.sendAwait
-import io.vertx.kotlin.ext.web.client.sendJsonAwait
 import io.vertx.kotlin.ext.web.client.sendJsonObjectAwait
 
 suspend fun getUUID(webClient: WebClient) =
@@ -69,15 +67,11 @@ suspend fun init(webClient: WebClient, loginPage: LoginPage): InitResult =
         .addQueryParam("pass_ticket", loginPage.pass_ticket)
         .addQueryParam("skey", loginPage.skey)
         .addQueryParam("r", timeStamp)
-        .sendJsonAwait(object : Any() {
-            @JsonProperty("BaseRequest")
-            val r = BaseRequest(
-                loginPage.wxuin,
-                loginPage.wxsid,
-                loginPage.skey,
-                deviceId
+        .sendJsonObjectAwait(
+            JsonObject(
+                "BaseRequest" to BaseRequest.fromLoginPage(loginPage)
             )
-        })
+        )
         .bodyAsJson(InitResult::class.java)
 
 suspend fun statusNotify(
@@ -92,13 +86,7 @@ suspend fun statusNotify(
         .addQueryParam("pass_ticket", loginPage.pass_ticket)
         .sendJsonObjectAwait(
             JsonObject(
-                "BaseRequest" to
-                        BaseRequest(
-                            loginPage.wxuin,
-                            loginPage.wxsid,
-                            loginPage.skey,
-                            deviceId
-                        ),
+                "BaseRequest" to BaseRequest.fromLoginPage(loginPage),
                 "Code" to 3,
                 "FromUserName" to initResult.user.userName,
                 "ToUserName" to initResult.user.userName,
@@ -118,6 +106,56 @@ suspend fun getContact(webClient: WebClient, loginPage: LoginPage) =
         .sendJsonObjectAwait(JsonObject())
         .bodyAsString()
 
-//suspend fun getBatchContact(webClient: WebClient,loginPage: LoginPage)=
+//suspend fun getBatchContact(
+//    webClient: WebClient,
+//    loginPage: LoginPage,
+//    )=
 //        webClient
-//            .postAbs()
+//            .postAbs(Api.GET_CONTACT_BATCH)
+//            .addQueryParam("type","ex")
+//            .addQueryParam("r", timeStamp)
+//            .addQueryParam("pass_ticket", loginPage.pass_ticket)
+
+suspend fun sendMessage(
+    webClient: WebClient,
+    loginPage: LoginPage,
+    message: String,
+    from: String,
+    to: String
+) = timeStamp.let {
+    (it.toLong() shl 4).toString() + randomLiteralNumberString(4)
+}.let { id ->
+    webClient
+        .postAbs(Api.SEND_MSG)
+        .addQueryParam("pass_ticket", loginPage.pass_ticket)
+        .sendJsonObjectAwait(
+            JsonObject(
+                "BaseRequest" to BaseRequest.fromLoginPage(loginPage),
+                "Msg" to JsonObject(
+                    "Type" to 1,
+                    "Content" to message,
+                    "FromUserName" to from,
+                    "ToUserName" to to,
+                    "LocalID" to id,
+                    "ClientMsgId" to id
+                )
+            )
+        )
+        .bodyAsJson(SentMessage::class.java)
+}
+
+suspend fun revokeMessage(
+    webClient: WebClient,
+    baseRequest: BaseRequest,
+    id: String,
+    to: String
+) = webClient
+    .postAbs(Api.REVOKE_MSG)
+    .sendJsonObjectAwait(
+        JsonObject(
+            "BaseRequest" to baseRequest,
+            "SvrMsgId" to id,
+            "ToUserName" to to,
+            "ClientMsgId" to id
+        )
+    )

@@ -15,7 +15,7 @@ import kotlin.random.Random
 
 val uuidPattern = "(\\S|\\s)*window.QRLogin.uuid = \"(\\S+)\";".toRegex()
 
-val qrLoginCodePattern="window.code=(\\d\\d\\d);(\\S|\\s)*".toRegex()
+val qrLoginCodePattern = "window.code=(\\d\\d\\d);(\\S|\\s)*".toRegex()
 
 fun getLoginResult(raw: String) = URL(raw.dropWhile { it != 'h' }).query.split("&").associate { s ->
     if (s.startsWith("uuid"))
@@ -68,7 +68,9 @@ fun WebClient.getAbs(api: Api): HttpRequest<Buffer> = getAbs(api.base)
 
 fun WebClient.postAbs(api: Api): HttpRequest<Buffer> = postAbs(api.base)
 
+fun randomLiteralNumberString(n: Int) = List(n) { Random.nextInt(0, 9) }.fold("") { acc, i -> acc + i.toString() }
 
-val deviceId = "e" + List(15) { Random.nextInt(0, 9) }.fold("") { acc, i -> acc + i.toString() }
+val deviceId = "e" + randomLiteralNumberString(15)
 
-const val fakeUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36"
+const val fakeUserAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36"
